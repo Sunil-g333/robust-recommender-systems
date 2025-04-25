@@ -2,8 +2,11 @@
 
 A content based movie recommender system using cosine similarity
 
-## https://www.kaggle.com/datasets/tmdb/tmdb-movie-metadata
+## Dataset:
+### https://www.kaggle.com/datasets/tmdb/tmdb-movie-metadata
 
-## https://www.themoviedb.org/?language=en-AU
+## API:
+### https://www.themoviedb.org/?language=en-AU
 
-## https://docs.streamlit.io/deploy/concepts
+## Library Docs:
+### https://docs.streamlit.io/deploy/concepts
