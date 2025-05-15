@@ -4,6 +4,14 @@ import requests
 import bcrypt
 import json
 import os
+from surprise import SVD
+import pandas as pd
+
+with open("svd_model.pkl", "rb") as f:
+    svd_model = pickle.load(f)
+
+ratings = pd.read_csv("ratings.csv")
+
 
 USERS_FILE = "users.json"
 HISTORY_FILE = "user_activities.json"
@@ -32,6 +40,7 @@ def hash_password(password):
 def check_password(password, hashed):
     return bcrypt.checkpw(password.encode(), hashed.encode())
 
+
 # App session state init
 if 'logged_in' not in st.session_state:
     st.session_state.logged_in = False
@@ -58,6 +67,21 @@ def recommend(movie):
         movie_id = movies.iloc[i[0]].movie_id
         posters.append(fetch_poster(movie_id))
         names.append(movies.iloc[i[0]].title)
+    return names, posters
+
+def recommend_svd(user_id, n=5):
+    movie_ids = movies['movie_id'].values
+    seen = ratings[ratings['userId'] == user_id]['movieId'].tolist()
+    unseen = [m for m in movie_ids if m not in seen]
+
+    predictions = [(movie_id, svd_model.predict(user_id, movie_id).est) for movie_id in unseen]
+    top_n = sorted(predictions, key=lambda x: x[1], reverse=True)[:n]
+
+    names, posters = [], []
+    for mid, _ in top_n:
+        title = movies[movies['movie_id'] == mid]['title'].values[0]
+        names.append(title)
+        posters.append(fetch_poster(mid))
     return names, posters
 
 # Login/Register UI
@@ -113,23 +137,33 @@ else:
     similarity = pickle.load(open('similarity.pkl', 'rb'))
 
     st.title("🎬 Movie Recommender System")
-    selected_movie = st.selectbox("Choose a movie to get recommendations", movies['title'].values)
+    method = st.selectbox("Choose recommendation method", ["Content-Based", "Matrix Factorization"])
+
+    if method == "Content-Based":
+        selected_movie = st.selectbox("Choose a movie", movies['title'].values)
+    else:
+        user_id = st.number_input("Enter your user ID (1–100)", min_value=1, max_value=100, step=1)
 
     if st.button("Show Recommendation"):
-        names, posters = recommend(selected_movie)
+        if method == "Content-Based":
+            names, posters = recommend(selected_movie)
 
-        # Save to history
-        user = st.session_state.username
-        if user not in activity_history:
-            activity_history[user] = []
-        activity_history[user].append(selected_movie)
-        save_json(activity_history, HISTORY_FILE)
+            # Save to history
+            user = st.session_state.username
+            if user not in activity_history:
+                activity_history[user] = []
+            activity_history[user].append(selected_movie)
+            save_json(activity_history, HISTORY_FILE)
+        else:
+            names, posters = recommend_svd(user_id)
 
+        # Display posters
         cols = st.columns(5)
-        for i in range(5):
+        for i in range(len(names)):
             with cols[i]:
                 st.text(names[i])
                 st.image(posters[i])
+
 
     st.subheader("📜 My History")
     user_history = activity_history.get(st.session_state.username, [])

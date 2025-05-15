@@ -8,5 +8,10 @@
         "password": "$2b$12$HzNPNCS9d3UNMgL5aRYtPeBCbTaBFE0rTXJFSLRnJGyprS96jz2Q6",
         "role": "user",
         "email": ""
+    },
+    "User": {
+        "password": "$2b$12$RskaQsAiZBMiNyOL/UOzHuLHVGb8b9t4HaqS4cv.pGiOrV1mub87S",
+        "role": "user",
+        "email": "fake@fake.com"
     }
 }
