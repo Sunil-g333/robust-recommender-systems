@@ -1,0 +1,17 @@
+{
+    "shiva21": {
+        "password": "$2b$12$K3WbplcKFN675cNtjw4dmOVx0mH3hb9TqMTuWX7mvaQANYlZ1MneO",
+        "role": "admin",
+        "email": "girishiva2024@gmail.com"
+    },
+    "shiva": {
+        "password": "$2b$12$HzNPNCS9d3UNMgL5aRYtPeBCbTaBFE0rTXJFSLRnJGyprS96jz2Q6",
+        "role": "user",
+        "email": ""
+    },
+    "User": {
+        "password": "$2b$12$RskaQsAiZBMiNyOL/UOzHuLHVGb8b9t4HaqS4cv.pGiOrV1mub87S",
+        "role": "user",
+        "email": "fake@fake.com"
+    }
+}
