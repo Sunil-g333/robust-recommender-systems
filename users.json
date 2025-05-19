@@ -13,5 +13,10 @@
         "password": "$2b$12$RskaQsAiZBMiNyOL/UOzHuLHVGb8b9t4HaqS4cv.pGiOrV1mub87S",
         "role": "user",
         "email": "fake@fake.com"
+    },
+    "user": {
+        "password": "$2b$12$4k6qAY.CtmKcVFgKDpg9Deb571jx7p.oFTtdr5FB7WjClFpviQ8nW",
+        "role": "user",
+        "email": "fake@ka.com"
     }
 }
