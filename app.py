@@ -84,6 +84,38 @@ def recommend_svd(user_id, n=5):
         posters.append(fetch_poster(mid))
     return names, posters
 
+def recommend_hybrid(user_id, selected_movie, alpha=0.5, top_n=5):
+    """
+    Hybrid recommendation combining content similarity and SVD predictions.
+    alpha: weight for content similarity (0.0 to 1.0)
+    """
+    index = movies[movies['title'] == selected_movie].index[0]
+    movie_ids = movies['movie_id'].values
+
+    # Get similarity scores
+    content_scores = similarity[index]
+
+    # Get predicted ratings
+    predictions = [(i, svd_model.predict(user_id, movies.iloc[i].movie_id).est) for i in range(len(movies))]
+
+    hybrid_scores = []
+    for i, pred_rating in predictions:
+        sim_score = content_scores[i]
+        combined_score = alpha * sim_score + (1 - alpha) * pred_rating
+        hybrid_scores.append((i, combined_score))
+
+    # Sort by hybrid score
+    top_movies = sorted(hybrid_scores, key=lambda x: x[1], reverse=True)[1:top_n + 1]
+
+    names, posters = [], []
+    for i, _ in top_movies:
+        movie_id = movies.iloc[i].movie_id
+        names.append(movies.iloc[i].title)
+        posters.append(fetch_poster(movie_id))
+
+    return names, posters
+
+
 # Login/Register UI
 if not st.session_state.logged_in:
     st.title("🔐 Login or Register")
@@ -137,27 +169,54 @@ else:
     similarity = pickle.load(open('similarity.pkl', 'rb'))
 
     st.title("🎬 Movie Recommender System")
-    method = st.selectbox("Choose recommendation method", ["Content-Based", "Matrix Factorization"])
+    method = st.selectbox("Choose recommendation method", ["Content-Based", "Matrix Factorization", "Hybrid"])
 
     if method == "Content-Based":
         selected_movie = st.selectbox("Choose a movie", movies['title'].values)
+    elif method == "Hybrid":
+        selected_movie = st.selectbox("Choose a movie", movies['title'].values)
+        user_id = st.number_input("Enter your user ID (1-100)", min_value=1, max_value=100, step=1)
     else:
-        user_id = st.number_input("Enter your user ID (1–100)", min_value=1, max_value=100, step=1)
+        user_id = st.number_input("Enter your user ID (1-100)", min_value=1, max_value=100, step=1)
+
+
+    # if st.button("Show Recommendation"):
+    #     if method == "Content-Based":
+    #         names, posters = recommend(selected_movie)
+
+    #         # Save to history
+    #         user = st.session_state.username
+    #         if user not in activity_history:
+    #             activity_history[user] = []
+    #         activity_history[user].append(selected_movie)
+    #         save_json(activity_history, HISTORY_FILE)
+    #     else:
+    #         names, posters = recommend_svd(user_id)
+
+    #     # Display posters
+    #     cols = st.columns(5)
+    #     for i in range(len(names)):
+    #         with cols[i]:
+    #             st.text(names[i])
+    #             st.image(posters[i])
 
     if st.button("Show Recommendation"):
         if method == "Content-Based":
             names, posters = recommend(selected_movie)
 
-            # Save to history
             user = st.session_state.username
             if user not in activity_history:
                 activity_history[user] = []
             activity_history[user].append(selected_movie)
             save_json(activity_history, HISTORY_FILE)
-        else:
+
+        elif method == "Matrix Factorization":
             names, posters = recommend_svd(user_id)
 
-        # Display posters
+        else:  # Hybrid
+            names, posters = recommend_hybrid(user_id, selected_movie, alpha=0.5)
+
+        # Display
         cols = st.columns(5)
         for i in range(len(names)):
             with cols[i]:
