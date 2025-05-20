@@ -69,7 +69,6 @@ def recommend_hybrid(movie, user_id):
 
 # Streamlit app
 st.set_page_config(page_title="Movie Recommender", layout="wide")
-st.title("🎬 Movie Recommender System")
 
 # Session state setup
 if 'user' not in st.session_state:
@@ -79,53 +78,79 @@ if 'user_id' not in st.session_state:
 
 users = load_user_data()
 
-# Authentication
-with st.sidebar:
-    st.header("🔐 Login or Register")
-    username = st.text_input("Username")
-    password = st.text_input("Password", type="password")
-    option = st.radio("Option", ["Login", "Register"])
-    if st.button("Submit"):
-        if option == "Register":
-            if username in users:
-                st.error("User already exists.")
-            else:
-                user_id = len(users) + 1
-                if user_id > 100:
-                    st.error("User limit reached.")
-                else:
-                    hashed_pw = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
-                    users[username] = {"password": hashed_pw, "user_id": user_id, "role": "user"}
-                    save_user_data(users)
-                    st.success("User registered. Please login.")
-        elif option == "Login":
-            if username not in users:
-                st.error("User does not exist.")
-            elif not bcrypt.checkpw(password.encode('utf-8'), users[username]['password'].encode('utf-8')):
-                st.error("Incorrect password.")
-            else:
-                st.session_state.user = username
-                st.session_state.user_id = users[username]['user_id']
-                st.success(f"Welcome, {username}!")
+# Authentication page before showing main app
+# Init session state
+# Initialize session
+if "user" not in st.session_state:
+    st.session_state.user = None
 
-# After login
+if not st.session_state.user:
+    # Page heading
+    st.markdown("<h2 style='text-align:center;'>🔐 Welcome</h2>", unsafe_allow_html=True)
+
+    # Outer layout to center everything
+    left, center, right = st.columns([1, 2, 1])
+    with center:
+        # Tabs inside the centered column
+        login_tab, register_tab = st.tabs(["🔑 Login", "📝 Register"])
+
+        with login_tab:
+            st.write("")
+            username = st.text_input("", placeholder="Username", key="login_user")
+            password = st.text_input("", placeholder="Password", type="password", key="login_pass")
+            if st.button("Login", use_container_width=True):
+                if username not in users:
+                    st.error("User does not exist.")
+                elif not bcrypt.checkpw(password.encode(), users[username]['password'].encode()):
+                    st.error("Incorrect password.")
+                else:
+                    st.session_state.user = username
+                    st.session_state.user_id = users[username]['user_id']
+                    st.success(f"Welcome, {username}!")
+                    st.rerun()
+
+        with register_tab:
+            st.write("")
+            new_user = st.text_input("", placeholder="Choose username", key="reg_user")
+            email = st.text_input("", placeholder="Email (optional)", key="reg_email")
+            pw = st.text_input("", placeholder="Password", type="password", key="reg_pass")
+            pw_confirm = st.text_input("", placeholder="Confirm password", type="password", key="reg_confirm_pass")
+            if st.button("Register", use_container_width=True):
+                if not new_user or not pw or not pw_confirm:
+                    st.error("All required fields must be filled.")
+                elif email and ("@" not in email or "." not in email):
+                    st.error("Invalid email.")
+                elif pw != pw_confirm:
+                    st.error("Passwords don't match.")
+                elif len(pw) < 6:
+                    st.error("Password too short.")
+                elif new_user in users:
+                    st.error("User already exists.")
+                else:
+                    user_id = len(users) + 1
+                    hashed_pw = bcrypt.hashpw(pw.encode(), bcrypt.gensalt()).decode()
+                    users[new_user] = {
+                        "password": hashed_pw,
+                        "user_id": user_id,
+                        "role": "user",
+                        "email": email,
+                        "email_verified": False if email else True
+                    }
+                    save_user_data(users)
+                    st.success("Registered! Check email (simulated)." if email else "Registered successfully.")
+# Main app after login
 if st.session_state.user:
+    st.title("🎬 Movie Recommender System")
     username = st.session_state.user
     user_id = st.session_state.user_id
 
-    st.subheader(f"👋 Hello, {username} (User ID: {user_id})")
+    st.sidebar.success(f"👋 Logged in as: {username}")
+    if st.sidebar.button("🚪 Logout"):
+        st.session_state.user = None
+        st.session_state.user_id = None
+        st.rerun()
 
-    # SVD Recommendations
-    # st.markdown("### 🎯 Recommended For You")
-    # user_preds = preds_df[preds_df['userId'] == user_id].sort_values(by='rating_pred', ascending=False).head(5)
-    # cols = st.columns(5)
-    # default_poster = "https://placehold.co/?text=No+Image"
-    # for idx, row in enumerate(user_preds.itertuples()):
-    #     title = movies[movies['movie_id'] == row.movieId]['title'].values
-    #     if len(title) > 0:
-    #         poster = fetch_poster(row.movieId) or default_poster
-    #         cols[idx % 5].image(poster, width=150)
-    #         cols[idx % 5].caption(f"{title[0]} ({row.rating_pred:.2f})")
+    st.subheader(f"Hello, {username} (User ID: {user_id})")
 
     # Initialize session state for hybrid recommendations
     if 'hybrid_titles' not in st.session_state:
@@ -161,4 +186,3 @@ if st.session_state.user:
                 poster = fetch_poster(row.movieId) or default_poster
                 cols[idx % 5].image(poster, width=150)
                 cols[idx % 5].caption(f"{title[0]} ({row.rating_pred:.2f})")
-
