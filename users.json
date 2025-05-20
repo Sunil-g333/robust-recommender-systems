@@ -2,21 +2,30 @@
     "shiva21": {
         "password": "$2b$12$K3WbplcKFN675cNtjw4dmOVx0mH3hb9TqMTuWX7mvaQANYlZ1MneO",
         "role": "admin",
-        "email": "girishiva2024@gmail.com"
+        "email": "girishiva2024@gmail.com",
+        "user_id": 25
     },
     "shiva": {
         "password": "$2b$12$HzNPNCS9d3UNMgL5aRYtPeBCbTaBFE0rTXJFSLRnJGyprS96jz2Q6",
         "role": "user",
-        "email": ""
+        "email": "",
+        "user_id": 21
     },
     "User": {
         "password": "$2b$12$RskaQsAiZBMiNyOL/UOzHuLHVGb8b9t4HaqS4cv.pGiOrV1mub87S",
         "role": "user",
-        "email": "fake@fake.com"
+        "email": "fake@fake.com",
+        "user_id": 2
     },
     "user": {
         "password": "$2b$12$4k6qAY.CtmKcVFgKDpg9Deb571jx7p.oFTtdr5FB7WjClFpviQ8nW",
         "role": "user",
-        "email": "fake@ka.com"
+        "email": "fake@ka.com",
+        "user_id": 35
+    },
+    "User2": {
+        "password": "$2b$12$AF16zQ7GqYHzloPFzHIgu.fBoVbMteMnfvh0U/fW.i9SQL6hwDk9m",
+        "user_id": 5,
+        "role": "user"
     }
 }
