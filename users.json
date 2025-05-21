@@ -27,5 +27,76 @@
         "password": "$2b$12$AF16zQ7GqYHzloPFzHIgu.fBoVbMteMnfvh0U/fW.i9SQL6hwDk9m",
         "user_id": 5,
         "role": "user"
+    },
+    "test": {
+        "password": "$2b$12$KEvZdusRgvyJI/yTeLudfeui6v7QL.oLbCpSU8q8PHE6iyo51nju.",
+        "user_id": 6,
+        "role": "user"
+    },
+    "ram": {
+        "password": "$2b$12$BxQR8xUG7QQBHJOBPniUXOJhtFc1UfSwMcfWZglEWkGwmzvKEepGi",
+        "user_id": 7,
+        "role": "user"
+    },
+    "": {
+        "password": "$2b$12$Yxx5jrtaYD47U1rFW5yiH.ETfJQgBkx8bsAB7clZUYITBq9RQPj/O",
+        "user_id": 8,
+        "role": "user"
+    },
+    "testing": {
+        "password": "$2b$12$7qkVSNCa0tmdkbqNPwo75OjD8dQpGnpTzC/hpws14FAT6alDd0/Za",
+        "user_id": 9,
+        "role": "user",
+        "email": "testing@gmail.com",
+        "email_verified": false
+    },
+    "testing2": {
+        "password": "$2b$12$uO5pQp4gLwXr6aGNibVBlubTGAN98NVYNwoLVUkwGqvqyAOJ87I1S",
+        "user_id": 10,
+        "role": "user",
+        "email": null,
+        "email_verified": false
+    },
+    "testing3": {
+        "password": "$2b$12$JOO9rYQb1DB3YCur5KzBjeP2waKE5GIm4dtcSGP1B1PnzP4WFSpOW",
+        "user_id": 11,
+        "role": "user",
+        "email": null,
+        "email_verified": false
+    },
+    "testing4": {
+        "password": "$2b$12$kgBraUdo/fJHMg0s0n7FyOCpqzdNlyIUTINJDI/T6SHgbRmI7X3rG",
+        "user_id": 12,
+        "role": "user",
+        "email": null,
+        "email_verified": false
+    },
+    "testing5": {
+        "password": "$2b$12$OAiqakcAuBZo53NDoZfF4eEJa33llYhdm1DEIaBUHoASGBN/5hmdi",
+        "user_id": 13,
+        "role": "user",
+        "email": null,
+        "email_verified": false
+    },
+    "testing7": {
+        "password": "$2b$12$aAD52SYBpFKkwjUVEBqJHePS64YK3rHcOaqgBc64UzkOYJk/32WO2",
+        "user_id": 14,
+        "role": "user",
+        "email": "",
+        "email_verified": true
+    },
+    "testing44": {
+        "password": "$2b$12$SBwR.FB.KIufXcj1Gd5MXOvdNFkFPw7oMhY78/RbATd3zYuFY4s/C",
+        "user_id": 15,
+        "role": "user",
+        "email": "",
+        "email_verified": true
+    },
+    "shiva212": {
+        "password": "$2b$12$LyckUBWwkSGpBrPpNg52NeXMkWr0fy.fNAequ8c4Xx.HPzC1OuWyu",
+        "user_id": 16,
+        "role": "user",
+        "email": "",
+        "email_verified": true
     }
 }
