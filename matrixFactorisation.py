@@ -20,3 +20,21 @@ with open('svd_model.pkl', 'wb') as f:
 # # Example: Predict for user 1 on unseen movie 100
 # prediction = model.predict(uid=1, iid=100)
 # print(prediction.est)
+
+# ---- Generate predictions for all userId (1-100) and all movieIds ----
+movie_ids = ratings['movieId'].unique()
+predictions = []
+
+for uid in range(1, 101):  # User IDs from 1 to 100
+    for iid in movie_ids:
+        pred = model.predict(uid, iid)
+        predictions.append({
+            'userId': uid,
+            'movieId': iid,
+            'rating_pred': pred.est
+        })
+
+# Save to CSV
+pred_df = pd.DataFrame(predictions)
+pred_df.to_csv('svd_preds.csv', index=False)
+print("✅ svd_preds.csv has been generated.")

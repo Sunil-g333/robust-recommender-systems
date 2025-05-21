@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 
 # Load the TMDb movie dataset
-tmdb_path = "tmdb_5000_movies.csv"  # Ensure this is in your project directory
+tmdb_path = "tmdb_5000_movies.csv"  
 movies = pd.read_csv(tmdb_path)
 
 # Clean and filter the dataset
