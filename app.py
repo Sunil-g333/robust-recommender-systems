@@ -1,263 +1,188 @@
 import streamlit as st
 import pickle
+import pandas as pd
 import requests
 import bcrypt
 import json
 import os
-from surprise import SVD
-import pandas as pd
 
-with open("svd_model.pkl", "rb") as f:
-    svd_model = pickle.load(f)
-
+# Load data
+movies = pickle.load(open('movie_list.pkl', 'rb'))
+similarity = pickle.load(open('similarity.pkl', 'rb'))
 ratings = pd.read_csv("ratings.csv")
 
+# Load SVD predictions
+preds_df = pd.read_csv("svd_preds.csv")
 
-USERS_FILE = "users.json"
-HISTORY_FILE = "user_activities.json"
+# User data
+user_data_file = 'users.json'
+activity_file = 'user_activities.json'
 
-# Load and Save JSON Utilities
-def load_json(file):
-    if os.path.exists(file):
-        try:
-            with open(file, "r") as f:
-                content = f.read().strip()
-                if content == "":
-                    return {}
-                return json.loads(content)
-        except json.JSONDecodeError:
-            return {}
+# Helper functions
+def load_user_data():
+    if os.path.exists(user_data_file):
+        with open(user_data_file, 'r') as f:
+            return json.load(f)
     return {}
 
-def save_json(data, file):
-    with open(file, "w") as f:
+def save_user_data(data):
+    with open(user_data_file, 'w') as f:
         json.dump(data, f, indent=4)
 
-# Password utilities
-def hash_password(password):
-    return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
+def load_user_activities():
+    if os.path.exists(activity_file):
+        with open(activity_file, 'r') as f:
+            return json.load(f)
+    return {}
 
-def check_password(password, hashed):
-    return bcrypt.checkpw(password.encode(), hashed.encode())
+def save_user_activities(data):
+    with open(activity_file, 'w') as f:
+        json.dump(data, f, indent=4)
 
-
-# App session state init
-if 'logged_in' not in st.session_state:
-    st.session_state.logged_in = False
-if 'username' not in st.session_state:
-    st.session_state.username = ""
-if 'role' not in st.session_state:
-    st.session_state.role = ""
-
-users = load_json(USERS_FILE)
-activity_history = load_json(HISTORY_FILE)
-
-# Poster & Recommendation functions
 def fetch_poster(movie_id):
-    url = f"https://api.themoviedb.org/3/movie/{movie_id}?api_key=8265bd1679663a7ea12ac168da84d2e8&language=en-US"
-    data = requests.get(url).json()
-    poster_path = data.get('poster_path', "")
-    return "https://image.tmdb.org/t/p/w500/" + poster_path if poster_path else ""
+    try:
+        url = f"https://api.themoviedb.org/3/movie/{movie_id}?api_key=8265bd1679663a7ea12ac168da84d2e8&language=en-US"
+        data = requests.get(url).json()
+        if 'poster_path' in data and data['poster_path']:
+            return "https://image.tmdb.org/t/p/w500/" + data['poster_path']
+    except:
+        pass
+    return None 
 
-def recommend(movie):
+
+def recommend_hybrid(movie, user_id):
     index = movies[movies['title'] == movie].index[0]
-    distances = sorted(list(enumerate(similarity[index])), reverse=True, key=lambda x: x[1])
-    names, posters = [], []
-    for i in distances[1:6]:
+    distances = similarity[index]
+    movie_list = sorted(list(enumerate(distances)), reverse=True, key=lambda x: x[1])[1:6]
+    recommended_movies = []
+    recommended_posters = []
+    for i in movie_list:
         movie_id = movies.iloc[i[0]].movie_id
-        posters.append(fetch_poster(movie_id))
-        names.append(movies.iloc[i[0]].title)
-    return names, posters
+        poster = fetch_poster(movie_id)
+        title = movies.iloc[i[0]].title
+        # Check if prediction exists
+        svd_score = preds_df[(preds_df['userId'] == user_id) & (preds_df['movieId'] == movie_id)]["rating_pred"].values
+        score = svd_score[0] if len(svd_score) > 0 else 0
+        recommended_movies.append(f"{title} (Score: {score:.2f})")
+        recommended_posters.append(poster)
+    return recommended_movies, recommended_posters
 
-def recommend_svd(user_id, n=5):
-    movie_ids = movies['movie_id'].values
-    seen = ratings[ratings['userId'] == user_id]['movieId'].tolist()
-    unseen = [m for m in movie_ids if m not in seen]
+# Streamlit app
+st.set_page_config(page_title="Movie Recommender", layout="wide")
 
-    predictions = [(movie_id, svd_model.predict(user_id, movie_id).est) for movie_id in unseen]
-    top_n = sorted(predictions, key=lambda x: x[1], reverse=True)[:n]
+# Session state setup
+if 'user' not in st.session_state:
+    st.session_state.user = None
+if 'user_id' not in st.session_state:
+    st.session_state.user_id = None
 
-    names, posters = [], []
-    for mid, _ in top_n:
-        title = movies[movies['movie_id'] == mid]['title'].values[0]
-        names.append(title)
-        posters.append(fetch_poster(mid))
-    return names, posters
+users = load_user_data()
 
-def recommend_hybrid(user_id, selected_movie, alpha=0.5, top_n=5):
-    """
-    Hybrid recommendation combining content similarity and SVD predictions.
-    alpha: weight for content similarity (0.0 to 1.0)
-    """
-    index = movies[movies['title'] == selected_movie].index[0]
-    movie_ids = movies['movie_id'].values
+# Authentication page before showing main app
+# Init session state
+# Initialize session
+if "user" not in st.session_state:
+    st.session_state.user = None
 
-    # Get similarity scores
-    content_scores = similarity[index]
+if not st.session_state.user:
+    # Page heading
+    st.markdown("<h2 style='text-align:center;'>🔐 Welcome</h2>", unsafe_allow_html=True)
 
-    # Get predicted ratings
-    predictions = [(i, svd_model.predict(user_id, movies.iloc[i].movie_id).est) for i in range(len(movies))]
+    # Outer layout to center everything
+    left, center, right = st.columns([1, 2, 1])
+    with center:
+        # Tabs inside the centered column
+        login_tab, register_tab = st.tabs(["🔑 Login", "📝 Register"])
 
-    hybrid_scores = []
-    for i, pred_rating in predictions:
-        sim_score = content_scores[i]
-        combined_score = alpha * sim_score + (1 - alpha) * pred_rating
-        hybrid_scores.append((i, combined_score))
+        with login_tab:
+            st.write("")
+            username = st.text_input("", placeholder="Username", key="login_user")
+            password = st.text_input("", placeholder="Password", type="password", key="login_pass")
+            if st.button("Login", use_container_width=True):
+                if username not in users:
+                    st.error("User does not exist.")
+                elif not bcrypt.checkpw(password.encode(), users[username]['password'].encode()):
+                    st.error("Incorrect password.")
+                else:
+                    st.session_state.user = username
+                    st.session_state.user_id = users[username]['user_id']
+                    st.success(f"Welcome, {username}!")
+                    st.rerun()
 
-    # Sort by hybrid score
-    top_movies = sorted(hybrid_scores, key=lambda x: x[1], reverse=True)[1:top_n + 1]
+        with register_tab:
+            st.write("")
+            new_user = st.text_input("", placeholder="Choose username", key="reg_user")
+            email = st.text_input("", placeholder="Email (optional)", key="reg_email")
+            pw = st.text_input("", placeholder="Password", type="password", key="reg_pass")
+            pw_confirm = st.text_input("", placeholder="Confirm password", type="password", key="reg_confirm_pass")
+            if st.button("Register", use_container_width=True):
+                if not new_user or not pw or not pw_confirm:
+                    st.error("All required fields must be filled.")
+                elif email and ("@" not in email or "." not in email):
+                    st.error("Invalid email.")
+                elif pw != pw_confirm:
+                    st.error("Passwords don't match.")
+                elif len(pw) < 6:
+                    st.error("Password too short.")
+                elif new_user in users:
+                    st.error("User already exists.")
+                else:
+                    user_id = len(users) + 1
+                    hashed_pw = bcrypt.hashpw(pw.encode(), bcrypt.gensalt()).decode()
+                    users[new_user] = {
+                        "password": hashed_pw,
+                        "user_id": user_id,
+                        "role": "user",
+                        "email": email,
+                        "email_verified": False if email else True
+                    }
+                    save_user_data(users)
+                    st.success("Registered! Check email (simulated)." if email else "Registered successfully.")
+# Main app after login
+if st.session_state.user:
+    st.title("🎬 Movie Recommender System")
+    username = st.session_state.user
+    user_id = st.session_state.user_id
 
-    names, posters = [], []
-    for i, _ in top_movies:
-        movie_id = movies.iloc[i].movie_id
-        names.append(movies.iloc[i].title)
-        posters.append(fetch_poster(movie_id))
-
-    return names, posters
-
-
-# Login/Register UI
-if not st.session_state.logged_in:
-    st.title("🔐 Login or Register")
-    login_tab, register_tab = st.tabs(["🔑 Login", "📝 Register"])
-
-    with login_tab:
-        username = st.text_input("Username", key="login_user")
-        password = st.text_input("Password", type="password", key="login_pass")
-        if st.button("Login"):
-            if username in users and check_password(password, users[username]['password']):
-                st.session_state.logged_in = True
-                st.session_state.username = username
-                st.session_state.role = users[username].get('role', 'user')
-                st.success("✅ Login successful!")
-                st.write(f"Role after login: {st.session_state.role}")  # Debugging line
-                st.rerun()
-            else:
-                st.error("❌ Invalid username or password")
-
-    with register_tab:
-        new_user = st.text_input("Choose a username", key="reg_user")
-        email = st.text_input("Email (simulated)", key="reg_email")
-        pw1 = st.text_input("Password", type="password", key="reg_pass1")
-        pw2 = st.text_input("Confirm Password", type="password", key="reg_pass2")
-        if st.button("Register"):
-            if new_user in users:
-                st.warning("⚠️ Username already exists.")
-            elif pw1 != pw2:
-                st.warning("⚠️ Passwords do not match.")
-            elif new_user.strip() == "" or pw1.strip() == "":
-                st.warning("⚠️ Fields cannot be empty.")
-            else:
-                users[new_user] = {
-                    "password": hash_password(pw1),
-                    "role": "user",
-                    "email": email
-                }
-                save_json(users, USERS_FILE)
-                st.success("✅ Registered successfully. Please login.")
-
-# Main App
-else:
-    st.sidebar.success(f"👋 Welcome, {st.session_state.username} ({st.session_state.role})")
+    st.sidebar.success(f"👋 Logged in as: {username}")
     if st.sidebar.button("🚪 Logout"):
-        st.session_state.logged_in = False
-        st.session_state.username = ""
-        st.session_state.role = ""
+        st.session_state.user = None
+        st.session_state.user_id = None
         st.rerun()
 
-    movies = pickle.load(open('movie_list.pkl', 'rb'))
-    similarity = pickle.load(open('similarity.pkl', 'rb'))
+    st.subheader(f"Hello, {username} (User ID: {user_id})")
 
-    st.title("🎬 Movie Recommender System")
-    method = st.selectbox("Choose recommendation method", ["Content-Based", "Matrix Factorization", "Hybrid"])
+    # Initialize session state for hybrid recommendations
+    if 'hybrid_titles' not in st.session_state:
+        st.session_state.hybrid_titles = []
+    if 'hybrid_posters' not in st.session_state:
+        st.session_state.hybrid_posters = []
 
-    if method == "Content-Based":
-        selected_movie = st.selectbox("Choose a movie", movies['title'].values)
-    elif method == "Hybrid":
-        selected_movie = st.selectbox("Choose a movie", movies['title'].values)
-        user_id = st.number_input("Enter your user ID (1-100)", min_value=1, max_value=100, step=1)
+    # Movie selection dropdown
+    st.markdown("### 🔍 Search Movie you like")
+    movie_name = st.selectbox("Choose a movie", movies['title'].values)
+
+    # Recommend button
+    if st.button("Recommend"):
+        recommended_movies, posters = recommend_hybrid(movie_name, user_id)
+        st.session_state.hybrid_titles = recommended_movies
+        st.session_state.hybrid_posters = posters
+
+    # Display recommendations (SVD or hybrid if available)
+    st.markdown("### 🎯 Recommended For You")
+    cols = st.columns(5)
+    default_poster = "https://placehold.co/?text=No+Image"
+
+    if st.session_state.hybrid_titles and st.session_state.hybrid_posters:
+        for i in range(len(st.session_state.hybrid_titles)):
+            poster = st.session_state.hybrid_posters[i] or default_poster
+            cols[i % 5].image(poster, width=150)
+            cols[i % 5].caption(st.session_state.hybrid_titles[i])
     else:
-        user_id = st.number_input("Enter your user ID (1-100)", min_value=1, max_value=100, step=1)
-
-
-    # if st.button("Show Recommendation"):
-    #     if method == "Content-Based":
-    #         names, posters = recommend(selected_movie)
-
-    #         # Save to history
-    #         user = st.session_state.username
-    #         if user not in activity_history:
-    #             activity_history[user] = []
-    #         activity_history[user].append(selected_movie)
-    #         save_json(activity_history, HISTORY_FILE)
-    #     else:
-    #         names, posters = recommend_svd(user_id)
-
-    #     # Display posters
-    #     cols = st.columns(5)
-    #     for i in range(len(names)):
-    #         with cols[i]:
-    #             st.text(names[i])
-    #             st.image(posters[i])
-
-    if st.button("Show Recommendation"):
-        if method == "Content-Based":
-            names, posters = recommend(selected_movie)
-
-            user = st.session_state.username
-            if user not in activity_history:
-                activity_history[user] = []
-            activity_history[user].append(selected_movie)
-            save_json(activity_history, HISTORY_FILE)
-
-        elif method == "Matrix Factorization":
-            names, posters = recommend_svd(user_id)
-
-        else:  # Hybrid
-            names, posters = recommend_hybrid(user_id, selected_movie, alpha=0.5)
-
-        # Display
-        cols = st.columns(5)
-        for i in range(len(names)):
-            with cols[i]:
-                st.text(names[i])
-                st.image(posters[i])
-
-
-    st.subheader("📜 My History")
-    user_history = activity_history.get(st.session_state.username, [])
-    if user_history:
-        for item in reversed(user_history[-10:]):
-            st.markdown(f"- {item}")
-    else:
-        st.write("No history yet.")
-
-# Admin Panel for Role Management and User Deletion
-if st.session_state.role == "admin":
-    st.subheader("🔧 Admin Panel: Manage User Roles and Delete Users")
-
-    # Load users from the users.json file
-    users = load_json(USERS_FILE)
-    
-    # List of usernames (excluding current admin user)
-    usernames = [u for u in users if u != st.session_state.username]
-    
-    # Select user for role assignment or deletion
-    selected_user = st.selectbox("Select user", usernames)
-    
-    # Role assignment functionality
-    new_role = st.radio("Assign role", ["user", "admin"], index=0)
-    
-    if st.button("Update Role"):
-        users[selected_user]["role"] = new_role
-        save_json(users, USERS_FILE)
-        st.success(f"✅ Updated {selected_user}'s role to {new_role}")
-    
-    # Delete user functionality
-    if st.button("Delete User"):
-        if selected_user != st.session_state.username:  # Prevent deleting the logged-in admin
-            del users[selected_user]
-            save_json(users, USERS_FILE)
-            st.success(f"✅ Deleted user: {selected_user}")
-        else:
-            st.error("❌ You cannot delete your own account.")
+        user_preds = preds_df[preds_df['userId'] == user_id].sort_values(by='rating_pred', ascending=False).head(5)
+        for idx, row in enumerate(user_preds.itertuples()):
+            title = movies[movies['movie_id'] == row.movieId]['title'].values
+            if len(title) > 0:
+                poster = fetch_poster(row.movieId) or default_poster
+                cols[idx % 5].image(poster, width=150)
+                cols[idx % 5].caption(f"{title[0]} ({row.rating_pred:.2f})")
