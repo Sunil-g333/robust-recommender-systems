@@ -1,6 +1,8 @@
 # Robust Movie Recommendation System
 
 This is a Streamlit-based Movie Recommender System that uses a **hybrid recommendation approach**—combining **content-based filtering** (via cosine similarity) and **collaborative filtering** (via SVD model predictions). It includes user authentication (login and registration) with hashed passwords, user-specific recommendations, and movie posters fetched from the TMDB API.
+A content based movie recommender system using cosine similarity
+models used:content based,matrix factorization and hybrid
 
 ## Dataset:
 
