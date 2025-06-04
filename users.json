@@ -98,5 +98,19 @@
         "role": "user",
         "email": "",
         "email_verified": true
+    },
+    "Testing": {
+        "password": "$2b$12$lxrUOp3ut.1VsLZhFRKW7Oxe4X1mgdiqdyEFP9O0bCUqhGFfHOCCa",
+        "user_id": 17,
+        "role": "user",
+        "email": "example@example.com",
+        "email_verified": false
+    },
+    "thesis": {
+        "password": "$2b$12$3cYRcAQb/345ozfL3VT3UuALbg6Xkqyu64X5HLrJ8zsSEXhJPQSee",
+        "user_id": 18,
+        "role": "user",
+        "email": "example@example.com",
+        "email_verified": false
     }
 }
